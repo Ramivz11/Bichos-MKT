@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bichos Promo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d3d22; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { height: 100vh; max-width: 100vw; aspect-ratio: 9 / 16; display: block; }
+  body.render canvas { height: auto; width: 1080px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+/* ============ EDITÁ ACÁ LOS TEXTOS ============ */
+const CONFIG = {
+  brand: "BICHOS",
+  tagline: "ALIMENTOS BALANCEADOS",
+  offerLabel: "OFERTA DEL MES",
+  offerBig: "20%",
+  offerSmall: "OFF",
+  offerDetail: ["en alimentos balanceados", "para perros y gatos"],
+  offerFooter: "Válido durante todo el mes",
+  deliveryTitle: ["ENVÍO A", "DOMICILIO"],
+  deliveryLine1: "Te lo llevamos a tu casa",
+  deliveryLine2: "Rápido y sin cargar bolsas",
+  waTitle: ["PEDÍ POR", "WHATSAPP"],
+  chatOut: "¡Hola! Quiero 15 kg de alimento",
+  chatIn: "¡Listo! Te lo enviamos hoy",
+  whatsapp: "11 2345-6789",
+  logoSrc: "",            // opcional: ruta a tu logo (PNG cuadrado) para la escena final
+};
+/* ============================================== */
+
+const W = 1080, H = 1920, DURATION = 20, SCENE = 5;
+const C = { bg: "#1F8A4C", bgLight: "#2FA862", dark: "#13603A", deep: "#0E4A2C", white: "#FFFFFF" };
+const FONT = '"Inter Display", Inter, "Helvetica Neue", Arial, sans-serif';
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+
+let logoImg = null;
+if (CONFIG.logoSrc) { logoImg = new Image(); logoImg.src = CONFIG.logoSrc; }
+
+// ---------- helpers ----------
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const prog = (s, start, dur) => clamp((s - start) / dur);
+const eOutCubic = t => 1 - Math.pow(1 - t, 3);
+const eInCubic = t => t * t * t;
+const eInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const eOutBack = t => { const c1 = 1.70158, c3 = c1 + 1; return t === 0 ? 0 : 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+const eOutElastic = t => t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - .75) * (2 * Math.PI / 3)) + 1;
+
+function text(str, x, y, size, { weight = 900, color = C.white, alpha = 1, align = "center", spacing = 0, scale = 1, baseline = "middle" } = {}) {
+  if (alpha <= 0 || scale <= 0) return;
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  ctx.translate(x, y); ctx.scale(scale, scale);
+  ctx.font = `${weight} ${size}px ${FONT}`;
+  ctx.letterSpacing = spacing + "px";
+  ctx.textAlign = align; ctx.textBaseline = baseline;
+  ctx.fillStyle = color;
+  // compensate trailing letter-spacing when centered
+  ctx.fillText(str, align === "center" ? spacing / 2 : 0, 0);
+  ctx.restore();
+}
+
+function paw(x, y, r, color, rot = 0, alpha = 1) {
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(x, y); ctx.rotate(rot); ctx.fillStyle = color;
+  ctx.beginPath(); ctx.ellipse(0, r * .35, r * .62, r * .5, 0, 0, Math.PI * 2); ctx.fill();
+  const toes = [[-.62, -.22, .2], [-.24, -.62, .22], [.24, -.62, .22], [.62, -.22, .2]];
+  for (const [tx, ty, tr] of toes) { ctx.beginPath(); ctx.ellipse(tx * r, ty * r, tr * r, tr * r * 1.25, tx * .5, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+
+function bone(x, y, len, color, rot = 0, alpha = 1) {
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(x, y); ctx.rotate(rot); ctx.fillStyle = color;
+  const t = len * .22, e = len * .16;
+  ctx.fillRect(-len / 2, -t / 2, len, t);
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) { ctx.beginPath(); ctx.arc(sx * len / 2, sy * e * .75, e, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+
+function burst(x, y, rOut, rIn, points, rot, color, alpha) {
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(x, y); ctx.rotate(rot); ctx.fillStyle = color; ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) { const r = i % 2 ? rIn : rOut, a = i * Math.PI / points; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+
+function pill(x, y, w, h, { fill = null, stroke = null, lw = 6, scale = 1, alpha = 1 } = {}) {
+  if (scale <= 0 || alpha <= 0) return;
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(x, y); ctx.scale(scale, scale);
+  ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, h / 2);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+  ctx.restore();
+}
+
+// ---------- background ----------
+function background(t) {
+  const g = ctx.createRadialGradient(W / 2, H * .42, 100, W / 2, H * .5, H * .8);
+  g.addColorStop(0, C.bgLight); g.addColorStop(.55, C.bg); g.addColorStop(1, C.dark);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // floating paws & bones
+  for (let i = 0; i < 22; i++) {
+    const speed = 40 + (i * 37) % 60;
+    const x = ((i * 197) % 1000) + 40 + Math.sin(t * .6 + i) * 25;
+    const y = ((((i * 311) % 2200) - t * speed) % 2200 + 2200) % 2200 - 140;
+    const rot = Math.sin(t * .5 + i * 1.7) * .5 + i;
+    const size = 26 + (i * 13) % 34;
+    if (i % 3 === 0) bone(x, y, size * 2, C.white, rot, .07);
+    else paw(x, y, size, C.white, rot, .07);
+  }
+}
+
+// small brand mark on top of scenes 1-3
+function brandMark(s) {
+  const a = prog(s, .2, .5) * (1 - prog(s, 4.7, .3));
+  paw(540 - 150, 150, 26, C.white, -.3, a);
+  text(CONFIG.brand, 560, 152, 48, { spacing: 10, alpha: a });
+}
+
+// ---------- scene 1: oferta ----------
+function scene1(s) {
+  brandMark(s);
+  const p1 = eOutBack(prog(s, .25, .55));
+  pill(540, 470, 640, 112, { stroke: C.white, lw: 6, scale: p1 });
+  text(CONFIG.offerLabel, 540, 474, 56, { weight: 800, spacing: 5, scale: p1 });
+
+  const pb = eOutCubic(prog(s, .4, .8));
+  burst(540, 880, 430 * pb, 330 * pb, 18, s * .25, C.white, .12);
+  burst(540, 880, 330 * pb, 270 * pb, 14, -s * .35, C.white, .08);
+
+  const pn = eOutElastic(prog(s, .55, 1.1));
+  const pulse = 1 + .025 * Math.sin(Math.max(0, s - 1.6) * 5);
+  text(CONFIG.offerBig, 540, 860, 330, { scale: pn * pulse, spacing: -8 });
+  const po = eOutBack(prog(s, 1.0, .55));
+  pill(540, 1095, 300, 120, { fill: C.white, scale: po });
+  text(CONFIG.offerSmall, 540, 1099, 92, { color: C.bg, scale: po, spacing: 6 });
+
+  CONFIG.offerDetail.forEach((line, i) => {
+    const p = eOutCubic(prog(s, 1.4 + i * .18, .6));
+    text(line, 540, 1310 + i * 78 + (1 - p) * 50, 60, { weight: 700, alpha: p });
+  });
+  const pf = prog(s, 2.1, .6);
+  ctx.save(); ctx.globalAlpha = pf * .5; ctx.fillStyle = C.white; ctx.fillRect(540 - 160 * pf, 1520, 320 * pf, 4); ctx.restore();
+  text(CONFIG.offerFooter, 540, 1590, 42, { weight: 500, alpha: pf * .9 });
+}
+
+// ---------- scene 2: envío ----------
+function truck(x, y, s, bob) {
+  ctx.save(); ctx.translate(x, y + bob);
+  // cargo
+  ctx.fillStyle = C.white; ctx.beginPath(); ctx.roundRect(-260, -250, 340, 210, 22); ctx.fill();
+  paw(-90, -150, 52, C.bg, -.2);
+  // cab
+  ctx.beginPath(); ctx.moveTo(95, -40); ctx.lineTo(95, -190); ctx.lineTo(185, -190);
+  ctx.quadraticCurveTo(205, -190, 215, -170); ctx.lineTo(255, -100); ctx.quadraticCurveTo(262, -88, 262, -72);
+  ctx.lineTo(262, -40); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C.bg; ctx.beginPath(); ctx.moveTo(118, -165); ctx.lineTo(182, -165); ctx.lineTo(222, -105); ctx.lineTo(118, -105); ctx.closePath(); ctx.fill();
+  // chassis
+  ctx.fillStyle = C.white; ctx.beginPath(); ctx.roundRect(-270, -48, 540, 26, 10); ctx.fill();
+  // wheels
+  for (const wx of [-170, 180]) {
+    ctx.save(); ctx.translate(wx, -12);
+    ctx.fillStyle = C.deep; ctx.beginPath(); ctx.arc(0, 0, 50, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = C.white; ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill();
+    ctx.rotate(s * 14); ctx.strokeStyle = C.bg; ctx.lineWidth = 7;
+    for (let k = 0; k < 3; k++) { ctx.rotate(Math.PI / 3); ctx.beginPath(); ctx.moveTo(-28, 0); ctx.lineTo(28, 0); ctx.stroke(); }
+    ctx.fillStyle = C.bg; ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+function scene2(s) {
+  brandMark(s);
+  CONFIG.deliveryTitle.forEach((line, i) => {
+    const p = eOutCubic(prog(s, .25 + i * .15, .6));
+    text(line, 540 + (1 - p) * 300, 470 + i * 165, 150, { alpha: p, spacing: -2 });
+  });
+  // road
+  const roadY = 1200;
+  const pr = eOutCubic(prog(s, .3, .7));
+  ctx.save(); ctx.globalAlpha = .55 * pr; ctx.fillStyle = C.white;
+  ctx.fillRect(0, roadY + 46, W, 6);
+  for (let i = -1; i < 9; i++) { const dx = ((i * 160 - s * 700) % 1440 + 1440) % 1440 - 180; ctx.fillRect(dx, roadY + 90, 90, 8); }
+  ctx.restore();
+  // truck in / hold / out
+  const tin = eOutCubic(prog(s, .5, 1.1)), tout = eInCubic(prog(s, 4.15, .7));
+  const tx = lerp(-450, 540, tin) + tout * 1100;
+  const moving = (1 - tin) + tout;
+  // speed lines
+  ctx.save(); ctx.strokeStyle = C.white; ctx.lineCap = "round"; ctx.lineWidth = 8;
+  for (let k = 0; k < 3; k++) {
+    const ph = (s * 3 + k * .33) % 1; ctx.globalAlpha = (1 - ph) * .6;
+    const ly = roadY - 200 + k * 60, lx = tx - 320 - ph * 120;
+    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx - 90 - moving * 120, ly); ctx.stroke();
+  }
+  ctx.restore();
+  truck(tx, roadY + 34, s, Math.sin(s * 22) * 2.5 * (1 - moving * .5));
+
+  const p1 = eOutCubic(prog(s, 1.4, .6));
+  text(CONFIG.deliveryLine1, 540, 1420 + (1 - p1) * 50, 64, { weight: 800, alpha: p1 });
+  const p2 = eOutBack(prog(s, 1.8, .55));
+  pill(540, 1540, 740, 100, { stroke: C.white, lw: 5, scale: p2, alpha: .95 });
+  text(CONFIG.deliveryLine2, 540, 1543, 44, { weight: 600, scale: p2 });
+}
+
+// ---------- scene 3: whatsapp ----------
+function chatIcon(x, y, sc, s) {
+  if (sc <= 0) return;
+  ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+  ctx.fillStyle = C.white; ctx.beginPath(); ctx.arc(0, 0, 120, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-95, 60); ctx.lineTo(-125, 125); ctx.lineTo(-55, 100); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C.bg;
+  for (let i = 0; i < 3; i++) { const b = Math.max(0, Math.sin(s * 7 - i * .8)) * 14; ctx.beginPath(); ctx.arc(-45 + i * 45, -b, 17, 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+function bubble(str, side, y, p, fill, color) {
+  if (p <= 0) return;
+  ctx.save();
+  ctx.font = `700 46px ${FONT}`; ctx.letterSpacing = "0px";
+  const tw = ctx.measureText(str).width, w = tw + 80, h = 104;
+  const x = side === "right" ? 1000 - w : 80;
+  const ox = side === "right" ? x + w : x;
+  ctx.translate(ox, y + h); ctx.scale(eOutBack(p), eOutBack(p)); ctx.translate(-ox, -(y + h));
+  ctx.globalAlpha = clamp(p * 2);
+  ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(x, y, w, h, 36); ctx.fill();
+  ctx.beginPath();
+  if (side === "right") { ctx.moveTo(x + w - 40, y + h - 4); ctx.lineTo(x + w + 18, y + h + 8); ctx.lineTo(x + w - 8, y + h - 40); }
+  else { ctx.moveTo(x + 40, y + h - 4); ctx.lineTo(x - 18, y + h + 8); ctx.lineTo(x + 8, y + h - 40); }
+  ctx.fill();
+  ctx.fillStyle = color; ctx.textBaseline = "middle"; ctx.textAlign = "left"; ctx.fillText(str, x + 40, y + h / 2 + 2);
+  ctx.restore();
+}
+function scene3(s) {
+  brandMark(s);
+  chatIcon(540, 420, eOutBack(prog(s, .25, .6)), s);
+  CONFIG.waTitle.forEach((line, i) => {
+    const p = eOutCubic(prog(s, .45 + i * .15, .6));
+    text(line, 540, 680 + i * 150 + (1 - p) * 60, 140, { alpha: p, spacing: -2 });
+  });
+  bubble(CONFIG.chatOut, "right", 960, prog(s, 1.3, .5), C.white, C.deep);
+  // typing indicator
+  const ta = prog(s, 1.9, .2) * (1 - prog(s, 2.55, .15));
+  if (ta > 0) {
+    ctx.save(); ctx.globalAlpha = ta; ctx.fillStyle = C.deep; ctx.beginPath(); ctx.roundRect(80, 1110, 170, 90, 36); ctx.fill();
+    ctx.fillStyle = C.white; for (let i = 0; i < 3; i++) { ctx.globalAlpha = ta * (.4 + .6 * Math.max(0, Math.sin(s * 9 - i))); ctx.beginPath(); ctx.arc(125 + i * 40, 1155, 11, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
+  bubble(CONFIG.chatIn, "left", 1110, prog(s, 2.65, .5), C.deep, C.white);
+
+  const pn = eOutBack(prog(s, 3.1, .6));
+  const pulse = 1 + .03 * Math.sin(Math.max(0, s - 3.7) * 6);
+  pill(540, 1480, 760, 150, { fill: C.white, scale: pn * pulse });
+  text(CONFIG.whatsapp, 540, 1484, 84, { color: C.bg, scale: pn * pulse, spacing: 2 });
+  text("Escribinos y hacé tu pedido", 540, 1630, 44, { weight: 600, alpha: prog(s, 3.5, .5) * .95 });
+}
+
+// ---------- scene 4: logo ----------
+function scene4(s) {
+  const cx = 540, cy = 760;
+  // pulse rings
+  for (let k = 0; k < 3; k++) {
+    const ph = ((s - .7 - k * .55) % 1.65) / 1.65;
+    if (s < .7 + k * .55) continue;
+    ctx.save(); ctx.globalAlpha = (1 - ph) * .35; ctx.strokeStyle = C.white; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.arc(cx, cy, 220 + ph * 260, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  }
+  const pb = eOutBack(prog(s, .2, .75));
+  burst(cx, cy, 330 * pb, 280 * pb, 20, s * .2, C.white, .1);
+  if (pb > 0) {
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(pb, pb);
+    ctx.fillStyle = C.white; ctx.beginPath(); ctx.arc(0, 0, 215, 0, Math.PI * 2); ctx.fill();
+    if (logoImg && logoImg.complete && logoImg.naturalWidth) {
+      ctx.beginPath(); ctx.arc(0, 0, 200, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(logoImg, -200, -200, 400, 400);
+    } else {
+      ctx.strokeStyle = C.bg; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(0, 0, 185, 0, Math.PI * 2); ctx.stroke();
+      const pp = eOutElastic(prog(s, .55, 1));
+      paw(0, 10, 120 * pp, C.bg, -.25 + (1 - pp) * .8);
+    }
+    ctx.restore();
+  }
+  // brand letters
+  const letters = CONFIG.brand.split(""), size = 180, spacing = 14;
+  ctx.font = `900 ${size}px ${FONT}`; ctx.letterSpacing = "0px";
+  const widths = letters.map(l => ctx.measureText(l).width);
+  const total = widths.reduce((a, b) => a + b, 0) + spacing * (letters.length - 1);
+  let lx = cx - total / 2;
+  letters.forEach((l, i) => {
+    const p = eOutBack(prog(s, .9 + i * .07, .55));
+    text(l, lx + widths[i] / 2, 1150 - (1 - p) * 120, size, { alpha: clamp(p * 1.5) });
+    lx += widths[i] + spacing;
+  });
+  const pt = eOutCubic(prog(s, 1.6, .6));
+  ctx.save(); ctx.globalAlpha = pt * .6; ctx.fillStyle = C.white; ctx.fillRect(cx - 260 * pt, 1265, 520 * pt, 4); ctx.restore();
+  text(CONFIG.tagline, cx, 1330, 46, { weight: 700, spacing: 8, alpha: pt });
+
+  const pc = eOutBack(prog(s, 2.3, .6));
+  text("Pedidos por WhatsApp", cx, 1520, 44, { weight: 600, alpha: clamp(pc) * .9 });
+  pill(cx, 1615, 640, 120, { stroke: C.white, lw: 6, scale: pc });
+  text(CONFIG.whatsapp, cx, 1619, 70, { scale: pc, spacing: 2 });
+}
+
+// ---------- transitions ----------
+function wipe(t) {
+  for (const b of [SCENE, SCENE * 2, SCENE * 3]) {
+    const p = (t - (b - .4)) / .8;
+    if (p <= 0 || p >= 1) continue;
+    const e = eInOut(p);
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(-.22);
+    const y1 = lerp(2700, -2900, e), y2 = lerp(2700, -2900, clamp(e * 1.0 - .06 + .06 * e));
+    ctx.fillStyle = C.bgLight; ctx.fillRect(-1600, y1 - 1250, 3200, 2600);
+    ctx.fillStyle = C.deep; ctx.fillRect(-1600, y2 - 1150, 3200, 2400);
+    paw(0, y2 - 1150 + 1200, 160, C.white, 0, .12);
+    ctx.restore();
+  }
+}
+
+// fade out at the very end
+function render(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+  background(t);
+  const idx = Math.min(3, Math.floor(t / SCENE)), s = t - idx * SCENE;
+  [scene1, scene2, scene3, scene4][idx](s);
+  wipe(t);
+  const fi = 1 - prog(t, 0, .25);
+  if (fi > 0) { ctx.fillStyle = `rgba(14,74,44,${fi})`; ctx.fillRect(0, 0, W, H); }
+}
+
+window.renderFrame = render;
+window.DURATION = DURATION;
+window.ready = document.fonts.load(`900 100px "Inter Display"`).then(() => document.fonts.load(`700 100px "Inter Display"`)).catch(() => {});
+
+if (!location.search.includes("render")) {
+  let start = null;
+  const loop = now => { if (start === null) start = now; render(((now - start) / 1000) % DURATION); requestAnimationFrame(loop); };
+  window.ready.then(() => requestAnimationFrame(loop));
+  cv.addEventListener("click", () => { start = null; });
+} else document.body.classList.add("render");
+</script>
+</body>
+</html>
