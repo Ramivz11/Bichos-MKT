@@ -15,7 +15,7 @@ export const RemotionRoot: React.FC = () => {
 				width={1080}
 				height={1920}
 				fps={30}
-				durationInFrames={588}
+				durationInFrames={609}
 			/>
 			<Folder name="Escenas">
 				<Composition
@@ -65,7 +65,7 @@ export const RemotionRoot: React.FC = () => {
 					width={1080}
 					height={1920}
 					fps={30}
-					durationInFrames={165}
+					durationInFrames={186}
 					defaultProps={{
 						style: {
 							background: 'radial-gradient(120% 80% at 50% 30%, #9548b3 0%, #7d3d96 45%, #4d1f63 100%)',

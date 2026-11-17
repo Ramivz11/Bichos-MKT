@@ -39,7 +39,7 @@ const CierreInner = () => {
 				<Interactive.Div
 					name="No lo decimos"
 					style={{
-						opacity: interpolate(frame, [0.35 * fps, 0.37 * fps, 2.2 * fps, 2.45 * fps], [0, 1, 1, 0], {
+						opacity: interpolate(frame, [0.35 * fps, 0.37 * fps, 3.1 * fps, 3.35 * fps], [0, 1, 1, 0], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 						}),
@@ -49,7 +49,7 @@ const CierreInner = () => {
 							easing: Easing.out(Easing.back(1.9)),
 							output: 'perceptual-scale',
 						}),
-						translate: interpolate(frame, [0.35 * fps, 0.67 * fps, 2.2 * fps, 2.45 * fps], ['0px 80px', '0px 0px', '0px 0px', '0px -160px'], {
+						translate: interpolate(frame, [0.35 * fps, 0.67 * fps, 3.1 * fps, 3.35 * fps], ['0px 80px', '0px 0px', '0px 0px', '0px -160px'], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 							easing: Easing.inOut(Easing.cubic),
@@ -65,7 +65,7 @@ const CierreInner = () => {
 				<Interactive.Div
 					name="nosotros…"
 					style={{
-						opacity: interpolate(frame, [0.6 * fps, 0.62 * fps, 2.25 * fps, 2.5 * fps], [0, 1, 1, 0], {
+						opacity: interpolate(frame, [0.6 * fps, 0.62 * fps, 3.15 * fps, 3.4 * fps], [0, 1, 1, 0], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 						}),
@@ -75,7 +75,7 @@ const CierreInner = () => {
 							easing: Easing.out(Easing.back(1.9)),
 							output: 'perceptual-scale',
 						}),
-						translate: interpolate(frame, [0.6 * fps, 0.92 * fps, 2.25 * fps, 2.5 * fps], ['0px 80px', '0px 0px', '0px 0px', '0px -160px'], {
+						translate: interpolate(frame, [0.6 * fps, 0.92 * fps, 3.15 * fps, 3.4 * fps], ['0px 80px', '0px 0px', '0px 0px', '0px -160px'], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 							easing: Easing.inOut(Easing.cubic),
@@ -99,22 +99,22 @@ const CierreInner = () => {
 						borderRadius: 28,
 						backgroundColor: '#ffd84a',
 						color: '#3a1448',
-						opacity: interpolate(frame, [1 * fps, 1.02 * fps, 2.3 * fps, 2.55 * fps], [0, 1, 1, 0], {
+						opacity: interpolate(frame, [1.6 * fps, 1.62 * fps, 3.2 * fps, 3.45 * fps], [0, 1, 1, 0], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 						}),
-						scale: interpolate(frame, [1 * fps, 1.38 * fps], [0.3, 1], {
+						scale: interpolate(frame, [1.6 * fps, 1.98 * fps], [0.3, 1], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 							easing: Easing.out(Easing.back(1.9)),
 							output: 'perceptual-scale',
 						}),
-						translate: interpolate(frame, [1 * fps, 1.38 * fps, 2.3 * fps, 2.55 * fps], ['0px 80px', '0px 0px', '0px 0px', '0px -160px'], {
+						translate: interpolate(frame, [1.6 * fps, 1.98 * fps, 3.2 * fps, 3.45 * fps], ['0px 80px', '0px 0px', '0px 0px', '0px -160px'], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 							easing: Easing.inOut(Easing.cubic),
 						}),
-						rotate: interpolate(frame, [1 * fps, 1.38 * fps], ['-4deg', '0deg'], {
+						rotate: interpolate(frame, [1.6 * fps, 1.98 * fps], ['-4deg', '0deg'], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 						}),
@@ -144,11 +144,11 @@ const CierreInner = () => {
 						fontSize: 112,
 						letterSpacing: -3,
 						color: 'white',
-						opacity: interpolate(frame, [2.5 * fps, 2.52 * fps], [0, 1], {
+						opacity: interpolate(frame, [3.35 * fps, 3.37 * fps], [0, 1], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 						}),
-						scale: interpolate(frame, [2.5 * fps, 2.8 * fps], [0.3, 1], {
+						scale: interpolate(frame, [3.35 * fps, 3.65 * fps], [0.3, 1], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 							easing: Easing.out(Easing.back(1.9)),
@@ -165,17 +165,17 @@ const CierreInner = () => {
 						width: 900,
 						marginTop: 48,
 						filter: 'drop-shadow(6px 0 0 #fff) drop-shadow(-6px 0 0 #fff) drop-shadow(0 6px 0 #fff) drop-shadow(0 -6px 0 #fff) drop-shadow(0 28px 36px rgba(40,0,60,0.45))',
-						opacity: interpolate(frame, [2.75 * fps, 2.77 * fps], [0, 1], {
+						opacity: interpolate(frame, [3.6 * fps, 3.62 * fps], [0, 1], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 						}),
-						scale: interpolate(frame, [2.75 * fps, 3.2 * fps, 5.5 * fps], [0.3, 1, 1.04], {
+						scale: interpolate(frame, [3.6 * fps, 4.05 * fps, 6.2 * fps], [0.3, 1, 1.04], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 							easing: Easing.out(Easing.back(1.9)),
 							output: 'perceptual-scale',
 						}),
-						rotate: interpolate(frame, [2.75 * fps, 3.2 * fps, 4.2 * fps, 5.5 * fps], ['-10deg', '-3deg', '-1deg', '-3deg'], {
+						rotate: interpolate(frame, [3.6 * fps, 4.05 * fps, 5 * fps, 6.2 * fps], ['-10deg', '-3deg', '-1deg', '-3deg'], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 							easing: Easing.inOut(Easing.cubic),
@@ -193,11 +193,11 @@ const CierreInner = () => {
 							fontSize: 44,
 							padding: '24px 40px',
 							borderRadius: 32,
-							opacity: interpolate(frame, [3.25 * fps, 3.27 * fps], [0, 1], {
+							opacity: interpolate(frame, [4.1 * fps, 4.12 * fps], [0, 1], {
 								extrapolateLeft: 'clamp',
 								extrapolateRight: 'clamp',
 							}),
-							scale: interpolate(frame, [3.25 * fps, 3.55 * fps], [0.3, 1], {
+							scale: interpolate(frame, [4.1 * fps, 4.4 * fps], [0.3, 1], {
 								extrapolateLeft: 'clamp',
 								extrapolateRight: 'clamp',
 								easing: Easing.out(Easing.back(1.9)),
@@ -217,11 +217,11 @@ const CierreInner = () => {
 							fontSize: 44,
 							padding: '24px 40px',
 							borderRadius: 32,
-							opacity: interpolate(frame, [3.45 * fps, 3.47 * fps], [0, 1], {
+							opacity: interpolate(frame, [4.3 * fps, 4.32 * fps], [0, 1], {
 								extrapolateLeft: 'clamp',
 								extrapolateRight: 'clamp',
 							}),
-							scale: interpolate(frame, [3.45 * fps, 3.75 * fps], [0.3, 1], {
+							scale: interpolate(frame, [4.3 * fps, 4.6 * fps], [0.3, 1], {
 								extrapolateLeft: 'clamp',
 								extrapolateRight: 'clamp',
 								easing: Easing.out(Easing.back(1.9)),
@@ -247,11 +247,11 @@ const CierreInner = () => {
 						borderRadius: 80,
 						boxShadow: '0 16px 48px rgba(0,0,0,0.25)',
 						whiteSpace: 'nowrap',
-						opacity: interpolate(frame, [3.95 * fps, 3.97 * fps], [0, 1], {
+						opacity: interpolate(frame, [4.8 * fps, 4.82 * fps], [0, 1], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 						}),
-						scale: interpolate(frame, [3.95 * fps, 4.3 * fps, 4.6 * fps, 4.9 * fps, 5.2 * fps], [0.3, 1, 1.06, 1, 1.06], {
+						scale: interpolate(frame, [4.8 * fps, 5.15 * fps, 5.45 * fps, 5.75 * fps, 6.05 * fps], [0.3, 1, 1.06, 1, 1.06], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
 							easing: Easing.out(Easing.back(1.9)),
