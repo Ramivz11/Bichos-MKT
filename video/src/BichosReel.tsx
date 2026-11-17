@@ -27,7 +27,7 @@ const Musica = () => {
 			name="Música"
 			src={staticFile('sfx/musica.wav')}
 			loop
-			volume={interpolate(frame, [0, 6.1 * fps, 6.4 * fps, 7.6 * fps, 7.9 * fps, 11.25 * fps, 11.55 * fps, 13.9 * fps, 14.2 * fps, durationInFrames - 0.6 * fps, durationInFrames], [0.3, 0.3, 0.5, 0.5, 0.3, 0.3, 0.55, 0.55, 0.3, 0.3, 0], {
+			volume={interpolate(frame, [0, 6.1 * fps, 6.4 * fps, 7.6 * fps, 7.9 * fps, 11.25 * fps, 11.55 * fps, 13.9 * fps, 14.2 * fps, durationInFrames - 0.6 * fps, durationInFrames], [0.3, 0.3, 0.65, 0.65, 0.3, 0.3, 0.65, 0.65, 0.3, 0.3, 0], {
 				extrapolateLeft: 'clamp',
 				extrapolateRight: 'clamp',
 			})}

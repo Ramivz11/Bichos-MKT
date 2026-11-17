@@ -1,6 +1,6 @@
 """Genera el mapa real de la esquina de Bichos para el video.
 
-Lee datos de OpenStreetMap (descargados con la API de Overpass) y los convierte
+Lee datos de OpenStreetMap (API oficial o Overpass) y los convierte
 a trazos SVG con el estilo del video: calles, avenidas, plazas, río, edificios,
 nombres de calles y la ruta hasta el local.
 
@@ -19,6 +19,7 @@ MUNDO = 3000  # tamaño del lienzo en píxeles
 PX_POR_METRO = 1.2
 CALLE_1 = 'Garibaldi'
 CALLE_2 = 'Sáenz Peña'
+REFERENCIA_ARRIBA = 'Marin Maroto'  # calle que en el celular se ve arriba del local
 
 
 def es_calle(nombre, buscada):
@@ -29,6 +30,11 @@ def es_calle(nombre, buscada):
 
 def main(entrada, salida):
     datos = json.load(open(entrada, encoding='utf-8'))
+    # Acepta el formato de Overpass ("out geom") o el de la API oficial (/api/0.6/map.json)
+    coords = {e['id']: (e['lat'], e['lon']) for e in datos['elements'] if e['type'] == 'node'}
+    for e in datos['elements']:
+        if e['type'] == 'way' and 'geometry' not in e and all(n in coords for n in e.get('nodes', [])):
+            e['geometry'] = [{'lat': coords[n][0], 'lon': coords[n][1]} for n in e['nodes']]
     ways = [e for e in datos['elements'] if e['type'] == 'way' and 'geometry' in e]
 
     # 1) Encontrar la esquina: nodo compartido entre Garibaldi y Sáenz Peña
@@ -67,6 +73,23 @@ def main(entrada, salida):
 
     def dentro(puntos, margen=600):
         return any(-margen < x < MUNDO + margen and -margen < y < MUNDO + margen for x, y in puntos)
+
+    # Giro base: orientar el mapa como en el celular (Google Maps del local):
+    # la calle que cruza Marín Maroto queda vertical, con Marín Maroto arriba.
+    giro_base = 0.0
+    nodos_ref = {}
+    for w in ways:
+        t = w.get('tags', {})
+        if 'highway' in t and es_calle(t.get('name', ''), REFERENCIA_ARRIBA):
+            nodos_ref.update(nodos(w))
+    candidatos = [n for n in nodos_ref if n in g]
+    if candidatos:
+        ref = min(candidatos, key=lambda n: math.dist(xy(*g[n]), (MUNDO / 2, MUNDO / 2)))
+        rx, ry = xy(*g[ref])
+        ang = math.degrees(math.atan2(ry - MUNDO / 2, rx - MUNDO / 2))
+        giro_base = round(((-90 - ang + 180) % 360) - 180, 1)
+    print('Giro base:', giro_base)
+    cos_g, sin_g = math.cos(math.radians(giro_base)), math.sin(math.radians(giro_base))
 
     capas = {k: [] for k in ['verde', 'agua', 'rio', 'edificio', 'tren', 'servicio', 'calle', 'avenida', 'destacada']}
     segmentos = []  # tramos de calle (x1, y1, x2, y2, ancho)
@@ -129,16 +152,20 @@ def main(entrada, salida):
                 if len(cerca) >= 2:
                     largo = sum(math.dist(a, b) for a, b in zip(cerca, cerca[1:]))
                     if largo > largo_por_nombre.get(nombre, (0, None))[0]:
-                        if cerca[-1][0] < cerca[0][0]:
-                            cerca = cerca[::-1]  # que el texto no quede al revés
+                        dx = cerca[-1][0] - cerca[0][0]
+                        dy = cerca[-1][1] - cerca[0][1]
+                        if dx * cos_g - dy * sin_g < 0:
+                            cerca = cerca[::-1]  # que el texto no quede al revés en pantalla
                         largo_por_nombre[nombre] = (largo, cerca)
 
     for nombre, (largo, puntos) in largo_por_nombre.items():
         if largo > 160:
             etiquetas.append({'nombre': nombre, 'd': trazo(puntos), 'largo': round(largo)})
 
-    # 2) Ruta: desde un punto unas cuadras al sudoeste hasta la esquina
-    objetivo = (MUNDO / 2 - 380, MUNDO / 2 + 300)
+    # 2) Ruta: desde unas cuadras de distancia hasta la esquina
+    # punto de partida: abajo a la izquierda en pantalla (ya girada), para que la ruta llegue de frente
+    sx, sy = -150, 420
+    objetivo = (MUNDO / 2 + sx * cos_g + sy * sin_g, MUNDO / 2 - sx * sin_g + sy * cos_g)
     inicio = min(pos, key=lambda n: math.dist(pos[n], objetivo))
     dist = {inicio: 0}
     previo = {}
@@ -164,9 +191,12 @@ def main(entrada, salida):
 
     casas, arboles = poblar(segmentos, obstaculos, poligonos_verdes, poligonos_agua)
 
+
+
     salida_json = {
         'fuente': '© colaboradores de OpenStreetMap',
         'mundo': MUNDO,
+        'giroBase': giro_base,
         'esquina': {'x': MUNDO / 2, 'y': MUNDO / 2, 'lat': lat0, 'lon': lon0},
         'capas': capas,
         'etiquetas': etiquetas,
@@ -259,7 +289,7 @@ def poblar(segmentos, obstaculos, verdes, agua):
                 r = max(frente, fondo) * 0.5
                 d = math.dist((x, y), centro)
                 if d < RADIO_TOTAL and libre(x, y, fondo / 2 + 2) and not choca(x, y, r) and not en_zona_especial(x, y):
-                    alto = 5 + rnd.random() * 6 if rnd.random() > 0.12 else 12 + rnd.random() * 10
+                    alto = 8 + rnd.random() * 7 if rnd.random() > 0.15 else 17 + rnd.random() * 12
                     casas.append([round(x, 1), round(y, 1), round(frente, 1), round(fondo, 1), round(ang, 1), round(alto, 1), rnd.randrange(5), int(d < RADIO_3D)])
                     marcar(x, y, r)
                 # árbol en la vereda

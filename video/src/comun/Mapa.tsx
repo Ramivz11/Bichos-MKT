@@ -12,6 +12,8 @@ type Arbol = [number, number, number, number];
 
 export const MUNDO = datos.mundo;
 export const LOCAL = {x: datos.esquina.x, y: datos.esquina.y};
+// Giro para que Garibaldi quede horizontal, como se ve en el celular
+const GIRO_BASE = datos.giroBase;
 const casas = datos.casas as unknown as Casa[];
 const arboles = datos.arboles as unknown as Arbol[];
 
@@ -87,8 +89,8 @@ const MapaBase = React.memo(() => {
 // ---------- Ruta hasta Bichos ----------
 const Ruta = ({recorrido}: {readonly recorrido: number}) => (
 	<svg width={MUNDO} height={MUNDO} viewBox={`0 0 ${MUNDO} ${MUNDO}`} style={{position: 'absolute', left: 0, top: 0}}>
-		<path d={datos.ruta.d} stroke="#1a56c4" strokeWidth={20} fill="none" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={datos.ruta.largo} strokeDashoffset={datos.ruta.largo * (1 - recorrido)} />
-		<path d={datos.ruta.d} stroke="#4c8df6" strokeWidth={13} fill="none" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={datos.ruta.largo} strokeDashoffset={datos.ruta.largo * (1 - recorrido)} />
+		<path d={datos.ruta.d} opacity={recorrido > 0.001 ? 1 : 0} stroke="#1a56c4" strokeWidth={20} fill="none" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={datos.ruta.largo} strokeDashoffset={datos.ruta.largo * (1 - recorrido)} />
+		<path d={datos.ruta.d} opacity={recorrido > 0.001 ? 1 : 0} stroke="#4c8df6" strokeWidth={13} fill="none" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={datos.ruta.largo} strokeDashoffset={datos.ruta.largo * (1 - recorrido)} />
 		<circle cx={datos.ruta.inicio.x} cy={datos.ruta.inicio.y} r={44} fill="#4c8df6" opacity={0.18} />
 		<circle cx={datos.ruta.inicio.x} cy={datos.ruta.inicio.y} r={16} fill="#4c8df6" stroke="#fff" strokeWidth={5} />
 	</svg>
@@ -180,7 +182,7 @@ export const Camara = ({
 				height: MUNDO,
 				transformOrigin: '0 0',
 				transformStyle: 'preserve-3d',
-				transform: `translate(${cx}px, ${cy}px) rotateX(${inclinacion}deg) rotateZ(${giro}deg) scale(${zoom}) translate(${-LOCAL.x}px, ${-LOCAL.y}px)`,
+				transform: `translate(${cx}px, ${cy}px) rotateX(${inclinacion}deg) rotateZ(${giro + GIRO_BASE}deg) scale(${zoom}) translate(${-LOCAL.x}px, ${-LOCAL.y}px)`,
 			}}
 		>
 			<MapaBase />

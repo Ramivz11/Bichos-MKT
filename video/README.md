@@ -27,4 +27,18 @@ En Studio podés tocar textos, colores y tiempos de los elementos marcados con n
 (palabras del gancho, respuesta del chat, textos del cierre, sonidos).
 La cámara del mapa y el tipeo se calculan cuadro a cuadro, así que se cambian desde el código.
 
+## Mapa real
+
+El mapa sale de OpenStreetMap (© colaboradores de OpenStreetMap, licencia ODbL).
+Para regenerarlo:
+
+```console
+curl -o osm.json "https://api.openstreetmap.org/api/0.6/map.json?bbox=-64.14,-32.20,-64.08,-32.15"
+python3 scripts/generar_mapa.py osm.json src/comun/mapa-real.json
+```
+
+Las casas y los árboles en 3D se ubican solos a lo largo de las cuadras reales.
+
+La música (`public/sfx/musica.wav`) se genera con `python3 scripts/generar_musica.py public/sfx/musica.wav`.
+
 > Remotion es gratis para equipos de hasta 3 personas.
