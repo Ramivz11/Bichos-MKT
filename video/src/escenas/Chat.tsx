@@ -347,7 +347,7 @@ const ChatInner = () => {
 					}}
 				>
 					<div style={{position: 'absolute', left: 0, top: 0, width: TARJETA.w, height: TARJETA.h, overflow: 'hidden'}}>
-						<Camara cx={TARJETA.w / 2} cy={TARJETA.h / 2 + 56} zoom={0.6} giro={16} inclinacion={0} recorrido={0} />
+						<Camara cx={TARJETA.w / 2} cy={TARJETA.h / 2 + 56} zoom={0.6} giro={16} inclinacion={0} recorrido={0} en3d={false} />
 					</div>
 					<div style={{position: 'absolute', left: 32, bottom: 40}}>
 						<div style={{fontSize: 34, fontWeight: 700}}>Bichos</div>

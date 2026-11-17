@@ -1,118 +1,147 @@
-import React, {useMemo} from 'react';
+import React from 'react';
+import datos from './mapa-real.json';
 import {fontFamily} from './marca';
 
-// Mapa ilustrado estilo "Maps" (no son las calles reales de Río Tercero).
-// Se genera con código: cuadras, calles, plazas, río y la ruta hasta Bichos.
-// Es decoración generada, por eso no es editable pieza por pieza en Studio.
+// Mapa real de la esquina Garibaldi y Roque Sáenz Peña (Río Tercero).
+// Las calles, plazas y el río salen de OpenStreetMap (© colaboradores de OpenStreetMap).
+// Las casas y los árboles se ubican solos a lo largo de las cuadras reales
+// (ver scripts/generar_mapa.py). Todo es generado, así que no se edita pieza por pieza en Studio.
 
-export const MUNDO = 3000; // tamaño del mapa en píxeles
-const CUADRA = 125;
-export const LOCAL = {x: 1500, y: 1500}; // esquina Garibaldi y Roque Sáenz Peña
-const RUTA = `M ${7 * CUADRA} ${14 * CUADRA} L ${9 * CUADRA} ${14 * CUADRA} L ${9 * CUADRA} ${LOCAL.y} L ${LOCAL.x} ${LOCAL.y}`;
-const LARGO_RUTA = 2 * CUADRA + 2 * CUADRA + 3 * CUADRA;
+type Casa = [number, number, number, number, number, number, number, number];
+type Arbol = [number, number, number, number];
 
-const azar = (semilla: number) => {
-	let s = semilla;
-	return () => {
-		s = (s * 16807) % 2147483647;
-		return s / 2147483647;
-	};
-};
+export const MUNDO = datos.mundo;
+export const LOCAL = {x: datos.esquina.x, y: datos.esquina.y};
+const casas = datos.casas as unknown as Casa[];
+const arboles = datos.arboles as unknown as Arbol[];
 
-const Cuadras = React.memo(() => {
-	const elementos = useMemo(() => {
-		const rnd = azar(7);
-		const out: React.ReactNode[] = [];
-		const n = MUNDO / CUADRA;
-		for (let i = 0; i < n; i++) {
-			for (let j = 0; j < n; j++) {
-				const x = i * CUADRA + 12;
-				const y = j * CUADRA + 12;
-				const w = CUADRA - 24;
-				if (rnd() < 0.07) {
-					out.push(<rect key={`p${i}-${j}`} x={x} y={y} width={w} height={w} rx={6} fill="#c5e5c0" />);
-					continue;
-				}
-				for (let k = 0; k < 4; k++) {
-					out.push(
-						<rect
-							key={`b${i}-${j}-${k}`}
-							x={x + 4 + rnd() * w * 0.55}
-							y={y + 4 + rnd() * w * 0.55}
-							width={18 + rnd() * 34}
-							height={18 + rnd() * 34}
-							rx={2}
-							fill="#e2ddd2"
-						/>,
-					);
-				}
-			}
-		}
-		const calles: React.ReactNode[] = [];
-		const bordes: React.ReactNode[] = [];
-		for (let i = 0; i <= n; i++) {
-			const v = i * CUADRA;
-			if (v !== LOCAL.x) {
-				bordes.push(<line key={`bv${i}`} x1={v} y1={0} x2={v} y2={MUNDO} stroke="#d7d1c5" strokeWidth={22} />);
-				calles.push(<line key={`cv${i}`} x1={v} y1={0} x2={v} y2={MUNDO} stroke="#fff" strokeWidth={18} />);
-			}
-			if (v !== LOCAL.y) {
-				bordes.push(<line key={`bh${i}`} x1={0} y1={v} x2={MUNDO} y2={v} stroke="#d7d1c5" strokeWidth={22} />);
-				calles.push(<line key={`ch${i}`} x1={0} y1={v} x2={MUNDO} y2={v} stroke="#fff" strokeWidth={18} />);
-			}
-		}
-		return [...out, ...bordes, ...calles];
-	}, []);
-	return <>{elementos}</>;
+const TECHOS = ['#ece4d8', '#e3d9cb', '#f1ebe1', '#dd9572', '#d8cdbf'];
+const PARED_CLARA = '#f7f3ec';
+const PARED_OSCURA = '#d9d0c2';
+
+// ---------- Plano del suelo (SVG) ----------
+const MapaBase = React.memo(() => {
+	const c = datos.capas;
+	return (
+		<svg width={MUNDO} height={MUNDO} viewBox={`0 0 ${MUNDO} ${MUNDO}`} style={{position: 'absolute', left: 0, top: 0}}>
+			<defs>
+				{datos.etiquetas.map((e, i) => (
+					<path key={e.nombre} id={`calle-${i}`} d={e.d} />
+				))}
+			</defs>
+			<rect width={MUNDO} height={MUNDO} fill="#ece8df" />
+			{c.verde.map((d, i) => (
+				<path key={`v${i}`} d={d} fill="#c5e5c0" />
+			))}
+			{c.agua.map((d, i) => (
+				<path key={`a${i}`} d={d} fill="#a9d3f5" />
+			))}
+			{c.rio.map((d, i) => (
+				<path key={`r${i}`} d={d} stroke="#a9d3f5" strokeWidth={60} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+			))}
+			{/* Casas lejanas y huella de las cercanas (vistas desde arriba) */}
+			{casas.map(([x, y, w, h, ang, , color], i) => (
+				<rect key={`c${i}`} x={x - w / 2} y={y - h / 2} width={w} height={h} rx={1.5} fill={TECHOS[color]} stroke="#d6cdbf" strokeWidth={1} transform={`rotate(${ang} ${x} ${y})`} />
+			))}
+			{c.tren.map((d, i) => (
+				<path key={`t${i}`} d={d} stroke="#b9b3aa" strokeWidth={6} fill="none" strokeDasharray="14 8" />
+			))}
+			{c.servicio.map((d, i) => (
+				<path key={`s${i}`} d={d} stroke="#fff" strokeWidth={8} fill="none" strokeLinecap="round" />
+			))}
+			{c.calle.map((d, i) => (
+				<path key={`cb${i}`} d={d} stroke="#d7d1c5" strokeWidth={26} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+			))}
+			{c.avenida.map((d, i) => (
+				<path key={`ab${i}`} d={d} stroke="#efc76a" strokeWidth={38} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+			))}
+			{c.destacada.map((d, i) => (
+				<path key={`db${i}`} d={d} stroke="#efc76a" strokeWidth={34} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+			))}
+			{c.calle.map((d, i) => (
+				<path key={`cf${i}`} d={d} stroke="#ffffff" strokeWidth={22} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+			))}
+			{c.avenida.map((d, i) => (
+				<path key={`af${i}`} d={d} stroke="#fde39a" strokeWidth={34} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+			))}
+			{c.destacada.map((d, i) => (
+				<path key={`df${i}`} d={d} stroke="#fde39a" strokeWidth={30} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+			))}
+			{/* Árboles lejanos vistos desde arriba */}
+			{arboles
+				.filter((a) => !a[3])
+				.map(([x, y, s], i) => (
+					<circle key={`ar${i}`} cx={x} cy={y} r={s * 0.6} fill="#8fcb8c" stroke="#73b673" strokeWidth={1.5} />
+				))}
+			{datos.etiquetas.map((e, i) => (
+				<text key={e.nombre} fontSize={20} fontWeight={600} fill="#5f5a50" fontFamily={fontFamily} stroke="#ffffff" strokeWidth={5} paintOrder="stroke" dy={7}>
+					<textPath href={`#calle-${i}`} startOffset="50%" textAnchor="middle">
+						{e.nombre}
+					</textPath>
+				</text>
+			))}
+		</svg>
+	);
 });
 
-const Etiqueta = ({texto, x, y, rot}: {texto: string; x: number; y: number; rot: number}) => (
-	<text
-		x={x}
-		y={y}
-		fontSize={22}
-		fontWeight={600}
-		fill="#6b5a2e"
-		fontFamily={fontFamily}
-		textAnchor="middle"
-		transform={`rotate(${rot} ${x} ${y})`}
-		stroke="#fde39a"
-		strokeWidth={5}
-		paintOrder="stroke"
-	>
-		{texto}
-	</text>
-);
-
-export const MapaMundo = ({recorrido}: {readonly recorrido: number}) => (
+// ---------- Ruta hasta Bichos ----------
+const Ruta = ({recorrido}: {readonly recorrido: number}) => (
 	<svg width={MUNDO} height={MUNDO} viewBox={`0 0 ${MUNDO} ${MUNDO}`} style={{position: 'absolute', left: 0, top: 0}}>
-		<rect width={MUNDO} height={MUNDO} fill="#ece8df" />
-		<Cuadras />
-		<rect x={LOCAL.x - 2 * CUADRA + 12} y={LOCAL.y + CUADRA + 12} width={CUADRA - 24} height={CUADRA - 24} rx={8} fill="#b8dfb2" />
-		<path d="M-50 640 C 500 420, 900 900, 1500 640 S 2500 380, 3050 560" stroke="#a9d3f5" strokeWidth={90} fill="none" strokeLinecap="round" />
-		<text x={1900} y={520} fontSize={34} fontStyle="italic" fill="#5b8fbd" fontFamily={fontFamily} transform="rotate(-8 1900 520)">
-			Río Ctalamochita
-		</text>
-		{/* Avenidas: Garibaldi (horizontal) y Roque Sáenz Peña (vertical) */}
-		<line x1={0} y1={LOCAL.y} x2={MUNDO} y2={LOCAL.y} stroke="#efc76a" strokeWidth={34} />
-		<line x1={LOCAL.x} y1={0} x2={LOCAL.x} y2={MUNDO} stroke="#efc76a" strokeWidth={34} />
-		<line x1={0} y1={LOCAL.y} x2={MUNDO} y2={LOCAL.y} stroke="#fde39a" strokeWidth={30} />
-		<line x1={LOCAL.x} y1={0} x2={LOCAL.x} y2={MUNDO} stroke="#fde39a" strokeWidth={30} />
-		{[-640, -1140, 520, 1040].map((dx) => (
-			<Etiqueta key={`g${dx}`} texto="Garibaldi" x={LOCAL.x + dx} y={LOCAL.y + 8} rot={0} />
-		))}
-		{[-560, -1060, 560, 1060].map((dy) => (
-			<Etiqueta key={`r${dy}`} texto="Roque Sáenz Peña" x={LOCAL.x + 8} y={LOCAL.y + dy} rot={-90} />
-		))}
-		{/* Ruta desde "tu ubicación" hasta Bichos */}
-		<path d={RUTA} stroke="#1a56c4" strokeWidth={20} fill="none" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={LARGO_RUTA} strokeDashoffset={LARGO_RUTA * (1 - recorrido)} />
-		<path d={RUTA} stroke="#4c8df6" strokeWidth={13} fill="none" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={LARGO_RUTA} strokeDashoffset={LARGO_RUTA * (1 - recorrido)} />
-		<circle cx={7 * CUADRA} cy={14 * CUADRA} r={44} fill="#4c8df6" opacity={0.18} />
-		<circle cx={7 * CUADRA} cy={14 * CUADRA} r={16} fill="#4c8df6" stroke="#fff" strokeWidth={5} />
+		<path d={datos.ruta.d} stroke="#1a56c4" strokeWidth={20} fill="none" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={datos.ruta.largo} strokeDashoffset={datos.ruta.largo * (1 - recorrido)} />
+		<path d={datos.ruta.d} stroke="#4c8df6" strokeWidth={13} fill="none" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={datos.ruta.largo} strokeDashoffset={datos.ruta.largo * (1 - recorrido)} />
+		<circle cx={datos.ruta.inicio.x} cy={datos.ruta.inicio.y} r={44} fill="#4c8df6" opacity={0.18} />
+		<circle cx={datos.ruta.inicio.x} cy={datos.ruta.inicio.y} r={16} fill="#4c8df6" stroke="#fff" strokeWidth={5} />
 	</svg>
 );
 
-// Cámara: centra el local en (cx, cy) de la pantalla, con zoom, giro e inclinación 3D.
+// ---------- Casas y árboles con volumen (CSS 3D) ----------
+const cara = (estilo: React.CSSProperties): React.CSSProperties => ({position: 'absolute', ...estilo});
+
+const Casa3D = ({x, y, w, d, ang, h, color}: {x: number; y: number; w: number; d: number; ang: number; h: number; color: number}) => (
+	<div style={{position: 'absolute', left: x, top: y, transformStyle: 'preserve-3d', transform: `rotateZ(${ang}deg)`}}>
+		<div style={cara({left: -w / 2, top: d / 2, width: w, height: h, background: PARED_OSCURA, transformOrigin: 'top', transform: 'rotateX(90deg)'})} />
+		<div style={cara({left: -w / 2, top: -d / 2 - h, width: w, height: h, background: PARED_CLARA, transformOrigin: 'bottom', transform: 'rotateX(-90deg)'})} />
+		<div style={cara({left: w / 2, top: -d / 2, width: h, height: d, background: PARED_CLARA, transformOrigin: 'left', transform: 'rotateY(-90deg)'})} />
+		<div style={cara({left: -w / 2 - h, top: -d / 2, width: h, height: d, background: PARED_OSCURA, transformOrigin: 'right', transform: 'rotateY(90deg)'})} />
+		<div style={cara({left: -w / 2, top: -d / 2, width: w, height: d, background: TECHOS[color], border: '1px solid rgba(0,0,0,0.08)', boxSizing: 'border-box', transform: `translateZ(${h}px)`})} />
+	</div>
+);
+
+const silueta =
+	'radial-gradient(circle at 50% 66%, #76bd77 0 34%, transparent 35%), linear-gradient(to right, transparent 46%, #8a6a4a 46% 54%, transparent 54%)';
+
+const Arbol3D = ({x, y, s}: {x: number; y: number; s: number}) => {
+	const alto = s * 2.2;
+	return (
+		<div style={{position: 'absolute', left: x, top: y, transformStyle: 'preserve-3d'}}>
+			<div style={cara({left: -s * 0.7, top: -s * 0.35, width: s * 1.4, height: s * 0.7, borderRadius: '50%', background: 'rgba(60,70,40,0.18)'})} />
+			<div style={cara({left: -s, top: 0, width: s * 2, height: alto, background: silueta, transformOrigin: 'top', transform: 'rotateX(90deg)'})} />
+			<div style={{position: 'absolute', left: 0, top: 0, transformStyle: 'preserve-3d', transform: 'rotateZ(90deg)'}}>
+				<div style={cara({left: -s, top: 0, width: s * 2, height: alto, background: silueta, transformOrigin: 'top', transform: 'rotateX(90deg)'})} />
+			</div>
+			<div style={cara({left: -s * 0.75, top: -s * 0.75, width: s * 1.5, height: s * 1.5, borderRadius: '50%', background: '#82c582', border: '1.5px solid #66ad68', boxSizing: 'border-box', transform: `translateZ(${alto * 0.66}px)`})} />
+		</div>
+	);
+};
+
+const Objetos3D = React.memo(() => (
+	<>
+		{casas
+			.filter((c) => c[7])
+			.map(([x, y, w, d, ang, h, color], i) => (
+				 
+				<Casa3D key={`c${i}`} x={x} y={y} w={w} d={d} ang={ang} h={h} color={color} />
+			))}
+		{arboles
+			.filter((a) => a[3])
+			.map(([x, y, s], i) => (
+				 
+				<Arbol3D key={`a${i}`} x={x} y={y} s={s} />
+			))}
+	</>
+));
+
+// Cámara: centra la esquina de Bichos en (cx, cy) de la pantalla, con zoom, giro e inclinación 3D.
 export const Camara = ({
 	cx,
 	cy,
@@ -121,6 +150,7 @@ export const Camara = ({
 	inclinacion,
 	desenfoque = 0,
 	recorrido,
+	en3d = true,
 }: {
 	readonly cx: number;
 	readonly cy: number;
@@ -129,8 +159,18 @@ export const Camara = ({
 	readonly inclinacion: number;
 	readonly desenfoque?: number;
 	readonly recorrido: number;
+	readonly en3d?: boolean;
 }) => (
-	<div style={{position: 'absolute', inset: 0, perspective: 1400, perspectiveOrigin: `${cx}px ${cy}px`, backgroundColor: '#ece8df'}}>
+	<div
+		style={{
+			position: 'absolute',
+			inset: 0,
+			perspective: 1400,
+			perspectiveOrigin: `${cx}px ${cy}px`,
+			backgroundColor: '#ece8df',
+			filter: desenfoque > 0.2 ? `blur(${desenfoque}px)` : undefined,
+		}}
+	>
 		<div
 			style={{
 				position: 'absolute',
@@ -139,11 +179,13 @@ export const Camara = ({
 				width: MUNDO,
 				height: MUNDO,
 				transformOrigin: '0 0',
+				transformStyle: 'preserve-3d',
 				transform: `translate(${cx}px, ${cy}px) rotateX(${inclinacion}deg) rotateZ(${giro}deg) scale(${zoom}) translate(${-LOCAL.x}px, ${-LOCAL.y}px)`,
-				filter: desenfoque > 0.2 ? `blur(${desenfoque}px)` : undefined,
 			}}
 		>
-			<MapaMundo recorrido={recorrido} />
+			<MapaBase />
+			<Ruta recorrido={recorrido} />
+			{en3d ? <Objetos3D /> : null}
 		</div>
 	</div>
 );

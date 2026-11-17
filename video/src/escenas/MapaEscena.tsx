@@ -263,6 +263,11 @@ const MapaEscenaInner = () => {
 					de <span style={{color: '#ffd84a'}}>tu casa</span>
 				</Interactive.Div>
 
+				{/* Crédito de los datos del mapa */}
+				<div style={{position: 'absolute', left: 24, bottom: 16, fontFamily, fontSize: 20, color: 'rgba(60,60,60,0.75)', opacity: p(0.8, 1.1) * (1 - p(3.9, 4.1))}}>
+					© OpenStreetMap
+				</div>
+
 				<LineasVelocidad opacidad={Math.sin(p(4.15, 4.6) * Math.PI)} escala={1 + p(4.15, 4.6) * 0.6} />
 			</div>
 		</>

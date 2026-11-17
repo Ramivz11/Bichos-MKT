@@ -69,6 +69,10 @@ def main(entrada, salida):
         return any(-margen < x < MUNDO + margen and -margen < y < MUNDO + margen for x, y in puntos)
 
     capas = {k: [] for k in ['verde', 'agua', 'rio', 'edificio', 'tren', 'servicio', 'calle', 'avenida', 'destacada']}
+    segmentos = []  # tramos de calle (x1, y1, x2, y2, ancho)
+    obstaculos = []  # tramos de río y tren
+    poligonos_verdes = []
+    poligonos_agua = []
     etiquetas = []
     grafo = {}
     pos = {}
@@ -84,16 +88,20 @@ def main(entrada, salida):
         if t.get('leisure') in ('park', 'pitch', 'playground', 'garden') or t.get('landuse') in ('grass', 'recreation_ground', 'village_green', 'meadow'):
             if cerrado:
                 capas['verde'].append(trazo(puntos, True))
+                poligonos_verdes.append(puntos)
         elif t.get('natural') == 'water' or t.get('water') or t.get('waterway') == 'riverbank':
             if cerrado:
                 capas['agua'].append(trazo(puntos, True))
+                poligonos_agua.append(puntos)
         elif t.get('waterway') in ('river', 'stream', 'canal'):
             capas['rio'].append(trazo(puntos))
+            obstaculos += [(a[0], a[1], b[0], b[1], 40) for a, b in zip(puntos, puntos[1:])]
         elif 'building' in t:
             if cerrado:
                 capas['edificio'].append(trazo(puntos, True))
         elif t.get('railway') == 'rail':
             capas['tren'].append(trazo(puntos))
+            obstaculos += [(a[0], a[1], b[0], b[1], 8) for a, b in zip(puntos, puntos[1:])]
         elif hw in ('primary', 'secondary', 'tertiary', 'trunk', 'primary_link', 'secondary_link', 'tertiary_link',
                     'residential', 'unclassified', 'living_street', 'service', 'road'):
             nombre = t.get('name', '')
@@ -105,6 +113,8 @@ def main(entrada, salida):
                 capas['servicio'].append(trazo(puntos))
             else:
                 capas['calle'].append(trazo(puntos))
+            ancho = 6 if hw == 'service' else (17 if hw in ('primary', 'secondary', 'trunk') else 11)
+            segmentos += [(a[0], a[1], b[0], b[1], ancho) for a, b in zip(puntos, puntos[1:])]
             # Grafo para calcular la ruta
             if hw != 'service':
                 for n, p in zip(w['nodes'], puntos):
@@ -152,6 +162,8 @@ def main(entrada, salida):
     ruta = [pos[n] for n in camino]
     largo_ruta = sum(math.dist(a, b) for a, b in zip(ruta, ruta[1:]))
 
+    casas, arboles = poblar(segmentos, obstaculos, poligonos_verdes, poligonos_agua)
+
     salida_json = {
         'fuente': '© colaboradores de OpenStreetMap',
         'mundo': MUNDO,
@@ -159,9 +171,119 @@ def main(entrada, salida):
         'capas': capas,
         'etiquetas': etiquetas,
         'ruta': {'d': trazo(ruta), 'largo': round(largo_ruta, 1), 'inicio': {'x': ruta[0][0], 'y': ruta[0][1]}},
+        # casas: [x, y, frente, fondo, ángulo°, alto, color, 3d]  árboles: [x, y, tamaño, 3d]
+        'casas': casas,
+        'arboles': arboles,
     }
     json.dump(salida_json, open(salida, 'w', encoding='utf-8'), ensure_ascii=False)
     print('Capas:', {k: len(v) for k, v in capas.items()}, 'etiquetas:', len(etiquetas), 'ruta px:', round(largo_ruta))
+    print('Casas:', len(casas), '(3D:', sum(c[7] for c in casas), ') Árboles:', len(arboles), '(3D:', sum(a[3] for a in arboles), ')')
+
+
+RADIO_3D = 430  # alrededor de la esquina, casas y árboles con volumen
+RADIO_TOTAL = 1250
+
+
+def dist_segmento(px, py, x1, y1, x2, y2):
+    dx, dy = x2 - x1, y2 - y1
+    l2 = dx * dx + dy * dy
+    t = 0 if l2 == 0 else max(0, min(1, ((px - x1) * dx + (py - y1) * dy) / l2))
+    return math.hypot(px - (x1 + t * dx), py - (y1 + t * dy))
+
+
+def dentro_poligono(x, y, pol):
+    adentro = False
+    j = len(pol) - 1
+    for i in range(len(pol)):
+        xi, yi = pol[i]
+        xj, yj = pol[j]
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / (yj - yi + 1e-9) + xi:
+            adentro = not adentro
+        j = i
+    return adentro
+
+
+def poblar(segmentos, obstaculos, verdes, agua):
+    """Casas a lo largo de cada cuadra y árboles en veredas y plazas (posiciones fijas)."""
+    rnd = __import__('random').Random(5)
+    celda = 80
+    grilla = {}
+    for sg in segmentos + obstaculos:
+        x1, y1, x2, y2, _ = sg
+        for cx in range(int(min(x1, x2) // celda) - 1, int(max(x1, x2) // celda) + 2):
+            for cy in range(int(min(y1, y2) // celda) - 1, int(max(y1, y2) // celda) + 2):
+                grilla.setdefault((cx, cy), []).append(sg)
+
+    def libre(x, y, margen):
+        for sg in grilla.get((int(x // celda), int(y // celda)), []):
+            if dist_segmento(x, y, *sg[:4]) < sg[4] + margen:
+                return False
+        return True
+
+    ocupado = {}
+
+    def choca(x, y, r):
+        cx, cy = int(x // 30), int(y // 30)
+        for i in range(cx - 1, cx + 2):
+            for j in range(cy - 1, cy + 2):
+                for (ox, oy, orad) in ocupado.get((i, j), []):
+                    if math.hypot(x - ox, y - oy) < r + orad:
+                        return True
+        return False
+
+    def marcar(x, y, r):
+        ocupado.setdefault((int(x // 30), int(y // 30)), []).append((x, y, r))
+
+    def en_zona_especial(x, y):
+        return any(dentro_poligono(x, y, p) for p in verdes + agua)
+
+    centro = (MUNDO / 2, MUNDO / 2)
+    casas, arboles = [], []
+    for (x1, y1, x2, y2, ancho) in segmentos:
+        if ancho < 8:
+            continue
+        largo = math.hypot(x2 - x1, y2 - y1)
+        if largo < 20:
+            continue
+        ux, uy = (x2 - x1) / largo, (y2 - y1) / largo
+        nx, ny = -uy, ux
+        ang = math.degrees(math.atan2(uy, ux))
+        for lado in (-1, 1):
+            t = 10 + rnd.random() * 6
+            while t < largo - 10:
+                frente = 11 + rnd.random() * 5
+                fondo = 18 + rnd.random() * 12
+                off = ancho + 7 + fondo / 2
+                x = x1 + ux * t + nx * off * lado
+                y = y1 + uy * t + ny * off * lado
+                r = max(frente, fondo) * 0.5
+                d = math.dist((x, y), centro)
+                if d < RADIO_TOTAL and libre(x, y, fondo / 2 + 2) and not choca(x, y, r) and not en_zona_especial(x, y):
+                    alto = 5 + rnd.random() * 6 if rnd.random() > 0.12 else 12 + rnd.random() * 10
+                    casas.append([round(x, 1), round(y, 1), round(frente, 1), round(fondo, 1), round(ang, 1), round(alto, 1), rnd.randrange(5), int(d < RADIO_3D)])
+                    marcar(x, y, r)
+                # árbol en la vereda
+                if rnd.random() < 0.3:
+                    tx = x1 + ux * (t + frente / 2) + nx * (ancho + 4) * lado
+                    ty = y1 + uy * (t + frente / 2) + ny * (ancho + 4) * lado
+                    dd = math.dist((tx, ty), centro)
+                    if dd < RADIO_TOTAL and libre(tx, ty, 2) and not choca(tx, ty, 4):
+                        arboles.append([round(tx, 1), round(ty, 1), round(7 + rnd.random() * 4, 1), int(dd < RADIO_3D)])
+                        marcar(tx, ty, 4)
+                t += frente + 1.5
+    # árboles en plazas
+    for pol in verdes:
+        xs = [p[0] for p in pol]
+        ys = [p[1] for p in pol]
+        area = (max(xs) - min(xs)) * (max(ys) - min(ys))
+        for _ in range(int(area / 450)):
+            x = min(xs) + rnd.random() * (max(xs) - min(xs))
+            y = min(ys) + rnd.random() * (max(ys) - min(ys))
+            dd = math.dist((x, y), centro)
+            if dd < RADIO_TOTAL and dentro_poligono(x, y, pol) and libre(x, y, 3) and not choca(x, y, 7):
+                arboles.append([round(x, 1), round(y, 1), round(9 + rnd.random() * 6, 1), int(dd < RADIO_3D)])
+                marcar(x, y, 7)
+    return casas, arboles
 
 
 if __name__ == '__main__':
