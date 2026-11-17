@@ -79,13 +79,11 @@ export const BichosReel = () => {
 				<Audio name="Enviar" src={staticFile('sfx/pop-alto.wav')} from={127} durationInFrames={5} volume={0.45} />
 				<Audio name="Aparece la tarjeta" src={staticFile('sfx/pop.wav')} from={182} durationInFrames={5} volume={0.4} />
 				<Audio name="Toque" src={staticFile('sfx/tap.wav')} from={230} durationInFrames={2} volume={0.9} />
-				<Audio name="Etiqueta del pin" src={staticFile('sfx/pop.wav')} from={301} durationInFrames={5} volume={0.35} />
-				<Audio name="Texto del mapa" src={staticFile('sfx/pop.wav')} from={331} durationInFrames={5} volume={0.4} />
 				<Audio name="Pop No lo decimos" src={staticFile('sfx/pop.wav')} from={434} durationInFrames={5} volume={0.5} />
 				<Audio name="Pop nosotros" src={staticFile('sfx/pop.wav')} from={441} durationInFrames={5} volume={0.5} />
 				<Audio name="Pop lo dice la IA" src={staticFile('sfx/pop-alto.wav')} from={453} durationInFrames={5} volume={0.5} />
 				<Audio name="Pop Vení a" src={staticFile('sfx/pop.wav')} from={498} durationInFrames={5} volume={0.5} />
-				<Audio name="Pop cartel" src={staticFile('sfx/pop.wav')} from={506} durationInFrames={5} volume={0.5} />
+				<Audio name="Pop logo" src={staticFile('sfx/pop.wav')} from={506} durationInFrames={5} volume={0.5} />
 				<Audio name="Pop dirección" src={staticFile('sfx/pop.wav')} from={521} durationInFrames={5} volume={0.45} />
 				<Audio name="Pop horarios" src={staticFile('sfx/pop.wav')} from={527} durationInFrames={5} volume={0.45} />
 				<Audio name="Pop Te esperamos" src={staticFile('sfx/pop-alto.wav')} from={542} durationInFrames={5} volume={0.5} />
@@ -93,12 +91,9 @@ export const BichosReel = () => {
 
 			<Track name="Efectos de transición">
 				<Audio name="Whoosh al chat" src={staticFile('sfx/whoosh-corto.wav')} from={60} durationInFrames={15} volume={0.6} />
-				<Audio name="Whoosh al mapa" src={staticFile('sfx/whoosh.wav')} from={233} durationInFrames={24} volume={0.7} />
-				<Audio name="Whoosh zoom" src={staticFile('sfx/whoosh.wav')} from={258} durationInFrames={24} volume={0.6} />
 				<Audio name="Cae el pin" src={staticFile('sfx/pin.wav')} from={289} durationInFrames={15} volume={0.9} />
-				<Audio name="Whoosh 3D" src={staticFile('sfx/whoosh.wav')} from={326} durationInFrames={24} volume={0.6} />
 				<Audio name="Whoosh zambullida" src={staticFile('sfx/whoosh-corto.wav')} from={352} durationInFrames={15} volume={1} />
-				<Audio name="Impacto portal" src={staticFile('sfx/impacto.wav')} from={367} durationInFrames={36} volume={1} />
+				<Audio name="Impacto portal" src={staticFile('sfx/impacto.wav')} from={367} durationInFrames={36} volume={0.8} />
 				<Audio name="Whoosh al cierre" src={staticFile('sfx/whoosh-corto.wav')} from={421} durationInFrames={15} volume={0.8} />
 			</Track>
 

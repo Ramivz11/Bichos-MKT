@@ -159,14 +159,12 @@ const CierreInner = () => {
 					Vení a
 				</Interactive.Div>
 				<Img
-					name="Cartel de Bichos"
-					src={staticFile('bichos-cartel.jpg')}
+					name="Logo de Bichos"
+					src={staticFile('bichos-logo.png')}
 					style={{
-						width: 860,
-						marginTop: 36,
-						borderRadius: 52,
-						border: '12px solid white',
-						boxShadow: '0 36px 80px rgba(0,0,0,0.35)',
+						width: 900,
+						marginTop: 48,
+						filter: 'drop-shadow(6px 0 0 #fff) drop-shadow(-6px 0 0 #fff) drop-shadow(0 6px 0 #fff) drop-shadow(0 -6px 0 #fff) drop-shadow(0 28px 36px rgba(40,0,60,0.45))',
 						opacity: interpolate(frame, [2.75 * fps, 2.77 * fps], [0, 1], {
 							extrapolateLeft: 'clamp',
 							extrapolateRight: 'clamp',
